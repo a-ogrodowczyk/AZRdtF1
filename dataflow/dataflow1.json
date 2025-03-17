@@ -23,6 +23,18 @@
 			"transformations": [
 				{
 					"name": "pivoerrors"
+				},
+				{
+					"name": "joint"
+				},
+				{
+					"name": "select"
+				},
+				{
+					"name": "window3"
+				},
+				{
+					"name": "window24"
 				}
 			],
 			"scriptLines": [
@@ -38,8 +50,8 @@
 				"     validateSchema: false,",
 				"     ignoreNoFilesFound: false) ~> source1",
 				"source(output(",
-				"          datetime as string,",
-				"          machineID as string,",
+				"          datetime as timestamp,",
+				"          machineID as short,",
 				"          errorID as string",
 				"     ),",
 				"     allowSchemaDrift: true,",
@@ -50,7 +62,40 @@
 				"     pivotBy(errorID),",
 				"     zygmunt = count(errorID),",
 				"     columnNaming: '$N$V',",
-				"     lateral: false) ~> pivoerrors"
+				"     lateral: false) ~> pivoerrors",
+				"source1, pivoerrors join(source1@datetime == pivoerrors@datetime",
+				"     && source1@machineID == pivoerrors@machineID,",
+				"     joinType:'left',",
+				"     matchType:'exact',",
+				"     ignoreSpaces: false,",
+				"     broadcast: 'auto')~> joint",
+				"joint select(mapColumn(",
+				"          datetime = source1@datetime,",
+				"          machineID = source1@machineID,",
+				"          volt,",
+				"          rotate,",
+				"          pressure,",
+				"          vibration,",
+				"          datetime = pivoerrors@datetime,",
+				"          machineID = pivoerrors@machineID",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select",
+				"select window(asc(datetime, true),",
+				"     rangeSpecified: true,",
+				"     startRowOffset: -3L,",
+				"     endRowOffset: 0L,",
+				"     mean_rotate_3h = mean(rotate),",
+				"          mean_pressure_3h = mean(pressure),",
+				"          mean_vibration_3h = mean(vibration),",
+				"          mean_volt_3h = mean(volt),",
+				"          stddev_volt_3h = stddev(volt)) ~> window3",
+				"window3 window(asc(datetime, true),",
+				"     rangeSpecified: true,",
+				"     startRowOffset: -24L,",
+				"     endRowOffset: 0L,",
+				"     mean_rotate_24h = mean(rotate),",
+				"          mean_volt_24h = mean(volt)) ~> window24"
 			]
 		}
 	}
