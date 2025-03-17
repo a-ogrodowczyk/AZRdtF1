@@ -10,10 +10,21 @@
 						"type": "DatasetReference"
 					},
 					"name": "source1"
+				},
+				{
+					"dataset": {
+						"referenceName": "lastmistake",
+						"type": "DatasetReference"
+					},
+					"name": "source2"
 				}
 			],
 			"sinks": [],
-			"transformations": [],
+			"transformations": [
+				{
+					"name": "pivoerrors"
+				}
+			],
 			"scriptLines": [
 				"source(output(",
 				"          datetime as timestamp,",
@@ -25,7 +36,21 @@
 				"     ),",
 				"     allowSchemaDrift: true,",
 				"     validateSchema: false,",
-				"     ignoreNoFilesFound: false) ~> source1"
+				"     ignoreNoFilesFound: false) ~> source1",
+				"source(output(",
+				"          datetime as string,",
+				"          machineID as string,",
+				"          errorID as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> source2",
+				"source2 pivot(groupBy(datetime,",
+				"          machineID),",
+				"     pivotBy(errorID),",
+				"     zygmunt = count(errorID),",
+				"     columnNaming: '$N$V',",
+				"     lateral: false) ~> pivoerrors"
 			]
 		}
 	}
