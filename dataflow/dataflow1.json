@@ -9,14 +9,21 @@
 						"referenceName": "DelimitedText1",
 						"type": "DatasetReference"
 					},
-					"name": "source1"
+					"name": "telemere"
 				},
 				{
 					"dataset": {
 						"referenceName": "lastmistake",
 						"type": "DatasetReference"
 					},
-					"name": "source2"
+					"name": "source2blad"
+				},
+				{
+					"dataset": {
+						"referenceName": "DelimitedText2",
+						"type": "DatasetReference"
+					},
+					"name": "poraszki"
 				}
 			],
 			"sinks": [],
@@ -35,9 +42,15 @@
 				},
 				{
 					"name": "window24"
+				},
+				{
+					"name": "pivoporaszki"
 				}
 			],
 			"scriptLines": [
+				"parameters{",
+				"     parameter1 as string",
+				"}",
 				"source(output(",
 				"          datetime as timestamp,",
 				"          machineID as integer,",
@@ -48,7 +61,7 @@
 				"     ),",
 				"     allowSchemaDrift: true,",
 				"     validateSchema: false,",
-				"     ignoreNoFilesFound: false) ~> source1",
+				"     ignoreNoFilesFound: false) ~> telemere",
 				"source(output(",
 				"          datetime as timestamp,",
 				"          machineID as short,",
@@ -56,22 +69,30 @@
 				"     ),",
 				"     allowSchemaDrift: true,",
 				"     validateSchema: false,",
-				"     ignoreNoFilesFound: false) ~> source2",
-				"source2 pivot(groupBy(datetime,",
+				"     ignoreNoFilesFound: false) ~> source2blad",
+				"source(output(",
+				"          datetime as string,",
+				"          machineID as string,",
+				"          failure as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> poraszki",
+				"source2blad pivot(groupBy(datetime,",
 				"          machineID),",
 				"     pivotBy(errorID),",
 				"     zygmunt = count(errorID),",
 				"     columnNaming: '$N$V',",
 				"     lateral: false) ~> pivoerrors",
-				"source1, pivoerrors join(source1@datetime == pivoerrors@datetime",
-				"     && source1@machineID == pivoerrors@machineID,",
+				"telemere, pivoerrors join(telemere@datetime == pivoerrors@datetime",
+				"     && telemere@machineID == pivoerrors@machineID,",
 				"     joinType:'left',",
 				"     matchType:'exact',",
 				"     ignoreSpaces: false,",
 				"     broadcast: 'auto')~> joint",
 				"joint select(mapColumn(",
-				"          datetime = source1@datetime,",
-				"          machineID = source1@machineID,",
+				"          datetime = telemere@datetime,",
+				"          machineID = telemere@machineID,",
 				"          volt,",
 				"          rotate,",
 				"          pressure,",
@@ -95,7 +116,13 @@
 				"     startRowOffset: -24L,",
 				"     endRowOffset: 0L,",
 				"     mean_rotate_24h = mean(rotate),",
-				"          mean_volt_24h = mean(volt)) ~> window24"
+				"          mean_volt_24h = mean(volt)) ~> window24",
+				"poraszki pivot(groupBy(datetime,",
+				"          machineID),",
+				"     pivotBy(failure),",
+				"     kacper = count(failure),",
+				"     columnNaming: '$N$V',",
+				"     lateral: false) ~> pivoporaszki"
 			]
 		}
 	}
